@@ -1,93 +1,86 @@
-# Nhận diện văn bản đồng sáng tác Người–AI trên MixSet với pipeline lai ELECTRA–SVM
+# Detecting Human–AI Co-Authored Text on MixSet with a Hybrid ELECTRA–SVM Pipeline
 
-> Tiểu luận học phần **Xử lý ngôn ngữ tự nhiên** – Ngành Khoa học dữ liệu, Trường Đại học Quy Nhơn (2026)
 
-| | |
-|---|---|
-| **Sinh viên thực hiện** | Lê Thị Phụng – MSSV 4654110019 – Lớp Khoa học dữ liệu K46 |
-| **Giảng viên hướng dẫn** | TS. Lê Văn Hùng |
 
----
+## 1. Introduction
 
-## 1. Giới thiệu
+With the rapid growth of large language models (GPT-4, Claude, Llama, etc.), AI-generated text detection has expanded to **detecting human–AI co-authored text (mixtext)**, where the boundary between human-written and machine-written text is increasingly blurred.
 
-Cùng với sự phát triển của các mô hình ngôn ngữ lớn (GPT-4, Claude, Llama…), bài toán phát hiện văn bản do AI tạo ra đã mở rộng sang **nhận diện văn bản đồng sáng tác Người–AI (mixtext)**, nơi ranh giới giữa văn bản người viết và máy viết trở nên mờ nhạt.
+The project consists of **two connected stages**:
 
-Dự án gồm **hai giai đoạn gắn kết**:
+1. **Baseline study on DAIGT V2** – comparing traditional machine learning models (Random Forest, SVM, XGBoost, LightGBM) and deep learning models (RoBERTa, ELECTRA, DeBERTa-v3-small) on pure AI-generated text detection.
+2. **Hybrid pipeline on MixSet** – building and optimizing an **ELECTRA + Majority Voting + SVM** pipeline to distinguish human-written text (HWT) from machine-generated/mixed text (MGT), with a focus on **class imbalance** (MGT ≈ 2,500 vs. HWT ≈ 500).
 
-1. **Khảo sát nền tảng trên DAIGT V2** – so sánh các mô hình học máy truyền thống (Random Forest, SVM, XGBoost, LightGBM) và học sâu (RoBERTa, ELECTRA, DeBERTa-v3-small) trong bài toán phát hiện văn bản AI thuần túy.
-2. **Pipeline lai trên MixSet** – xây dựng và tối ưu pipeline **ELECTRA + Majority Voting + SVM** để phân biệt văn bản con người (HWT) với văn bản có yếu tố đồng sáng tác/trộn (MGT), tập trung xử lý **mất cân bằng lớp** (MGT ≈ 2500 so với HWT ≈ 500).
-
-## 2. Cấu trúc thư mục
+## 2. Repository Structure
 
 ```
 .
-├── DAIGT_V2_2710_1.ipynb                    # Khảo sát DAIGT V2 – thực nghiệm 1
-├── DAIGT_V2_2710_2.ipynb                    # Khảo sát DAIGT V2 – thực nghiệm 2
-├── MixSet__03_11.ipynb                      # MixSet – pipeline ban đầu
-├── MixSet__17_11.ipynb                      # MixSet – pipeline tối ưu
-├── create_comparision_image_among_models.*  # Vẽ biểu đồ so sánh các mô hình (Hình 4.1)
+├── DAIGT_V2_2710_1.ipynb                    # DAIGT V2 study – experiment 1
+├── DAIGT_V2_2710_2.ipynb                    # DAIGT V2 study – experiment 2
+├── MixSet__03_11.ipynb                      # MixSet – initial pipeline
+├── MixSet__17_11.ipynb                      # MixSet – optimized pipeline
+├── create_comparision_image_among_models.*  # Model comparison plots (Figure 4.1)
 └── README.md
 ```
 
 
 
-### Mô tả từng file
+### File descriptions
 
-| File | Chức năng |
+| File | Purpose |
 |---|---|
-| `DAIGT_V2_2710_1` | Tải DAIGT V2 bằng `kagglehub`, lọc `RDizzl3_seven == True`, chia stratified 80/20. Huấn luyện **Random Forest, LightGBM** (TF-IDF n-grams) và **DeBERTa-v3-small** → *Bảng A*. |
-| `DAIGT_V2_2710_2` | Huấn luyện **SVM (LinearSVC), Random Forest, XGBoost** (TF-IDF 15k) và fine-tune **RoBERTa-base, ELECTRA** → *Bảng B*. |
-| `MixSet__03_11` | **Phiên bản ban đầu** trên MixSet: tách câu → ELECTRA (majority voting + mean-pooling) → SVM. Chưa dùng undersampling, ngưỡng mặc định 0.5. |
-| `MixSet__17_11` | **Phiên bản tối ưu**: chia tách ở cấp tài liệu, undersampling trên tập train, SVM RBF + `class_weight='balanced'`, tinh chỉnh ngưỡng quyết định trên đường Precision–Recall. |
-| `create_comparision_image_among_models` | Tổng hợp kết quả và tạo hình so sánh độ chính xác / thời gian huấn luyện giữa các mô hình trên DAIGT V2. |
+| `DAIGT_V2_2710_1` | Downloads DAIGT V2 via `kagglehub`, filters `RDizzl3_seven == True`, stratified 80/20 split. Trains **Random Forest, LightGBM** (TF-IDF n-grams) and **DeBERTa-v3-small** → *Table A*. |
+| `DAIGT_V2_2710_2` | Trains **SVM (LinearSVC), Random Forest, XGBoost** (TF-IDF 15k) and fine-tunes **RoBERTa-base, ELECTRA** → *Table B*. |
+| `MixSet__03_11` | **Initial version** on MixSet: sentence splitting → ELECTRA (majority voting + mean-pooling) → SVM. No undersampling, default threshold 0.5. |
+| `MixSet__17_11` | **Optimized version**: document-level split, undersampling on the training set, RBF SVM + `class_weight='balanced'`, decision threshold tuning on the Precision–Recall curve. |
+| `create_comparision_image_among_models` | Aggregates results and plots accuracy / training time comparisons across models on DAIGT V2. |
 
-## 3. Dữ liệu
+## 3. Data
 
-| Tập dữ liệu | Nguồn | Ghi chú |
+| Dataset | Source | Notes |
 |---|---|---|
-| **DAIGT V2** | Kaggle: `thedrcat/daigt-v2-train-dataset` (file `train_v2_drcat_02.csv`) | Lọc `RDizzl3_seven == True` → ≈ 20.450 mẫu. Nhãn: 0 = Human, 1 = AI. |
-| **MixSet** | Hugging Face: `ONE-Lab/MixSet` | ≈ 3000 mẫu train (MGT ≈ 2500, HWT ≈ 500). Dùng cột `revised`. Nhãn: HWT → 0, MGT → 1. |
+| **DAIGT V2** | Kaggle: `thedrcat/daigt-v2-train-dataset` (`train_v2_drcat_02.csv`) | Filtered by `RDizzl3_seven == True` → ≈ 20,450 samples. Labels: 0 = Human, 1 = AI. |
+| **MixSet** | Hugging Face: `ONE-Lab/MixSet` | ≈ 3,000 training samples (MGT ≈ 2,500, HWT ≈ 500). Uses the `revised` column. Labels: HWT → 0, MGT → 1. |
 
-## 4. Phương pháp
+## 4. Methodology
 
-### Giai đoạn 1 – DAIGT V2
-- **Mô hình học máy truyền thống:** TF-IDF mức từ (`max_features=15000`, `stop_words='english'`) → Random Forest / LinearSVC / XGBoost / LightGBM.
-- **Mô hình học sâu:** fine-tune RoBERTa-base, ELECTRA, DeBERTa-v3-small với token embeddings.
+### Stage 1 – DAIGT V2
+- **Traditional ML models:** word-level TF-IDF (`max_features=15000`, `stop_words='english'`) → Random Forest / LinearSVC / XGBoost / LightGBM.
+- **Deep learning models:** fine-tuning RoBERTa-base, ELECTRA and DeBERTa-v3-small with token embeddings.
 
-### Giai đoạn 2 – MixSet (pipeline lai)
+### Stage 2 – MixSet (hybrid pipeline)
 
 ```
-Văn bản ─► Chia train/test cấp tài liệu ─► Tách câu (NLTK sent_tokenize)
-        ─► ELECTRA-small-discriminator ─┬─► Logits token ─► Majority Voting ─► Nhãn câu
-                                        └─► Mean-pooling hidden states ─► Embedding câu
-        ─► SVM (RBF, class_weight='balanced', probability=True)
-        ─► Threshold tuning (θ* ≈ 0.7959) ─► Nhãn cuối cùng
+Text ─► Document-level train/test split ─► Sentence splitting (NLTK sent_tokenize)
+     ─► ELECTRA-small-discriminator ─┬─► Token logits ─► Majority Voting ─► Sentence label
+                                     └─► Mean-pooling of hidden states ─► Sentence embedding
+     ─► SVM (RBF, class_weight='balanced', probability=True)
+     ─► Threshold tuning (θ* ≈ 0.7959) ─► Final label
 ```
 
-Các kỹ thuật chính:
-- **Chống rò rỉ dữ liệu:** chia stratified ở cấp tài liệu *trước khi* tách câu.
-- **Undersampling** chỉ trên tập train: giữ toàn bộ HWT, giảm MGT xuống tỷ lệ ≈ 1.5 : 1 (≈ 400 HWT + 600 MGT).
-- **Trọng số lớp** `class_weight='balanced'` cho SVM.
-- **Tinh chỉnh ngưỡng** trên đường Precision–Recall của lớp Human.
+Key techniques:
+- **Data leakage prevention:** stratified split at the document level *before* sentence splitting.
+- **Undersampling** on the training set only: keep all HWT samples, reduce MGT to a ≈ 1.5 : 1 ratio (≈ 400 HWT + 600 MGT).
+- **Class weighting** with `class_weight='balanced'` for the SVM.
+- **Threshold tuning** on the Precision–Recall curve of the Human class.
 
-## 5. Kết quả
+## 5. Results
 
 ### 5.1. DAIGT V2
 
-| Mô hình | Loại | Accuracy | Thời gian train |
+| Model | Type | Accuracy | Training time |
 |---|---|---|---|
-| SVM (LinearSVC) | Truyền thống | 99.51% | 0.92 giây |
-| **ELECTRA** | Deep Learning | **99.53%** | 16.96 phút |
-| RoBERTa-base | Deep Learning | 98.93% | 18.39 phút |
-| Random Forest | Truyền thống | 98.66% | 50.33 giây |
-| XGBoost | Truyền thống | 97.19% | 2.29 phút |
-| LightGBM | Truyền thống | 99.39% | 4.51 phút |
+| SVM (LinearSVC) | Traditional | 99.51% | 0.92 s |
+| **ELECTRA** | Deep Learning | **99.53%** | 16.96 min |
+| RoBERTa-base | Deep Learning | 98.93% | 18.39 min |
+| Random Forest | Traditional | 98.66% | 50.33 s |
+| XGBoost | Traditional | 97.19% | 2.29 min |
+| LightGBM | Traditional | 99.39% | 4.51 min |
 | DeBERTa-v3-small | Deep Learning | 98.68% | – |
 
-### 5.2. MixSet – trước và sau tối ưu
+### 5.2. MixSet – before and after optimization
 
-| Chỉ số | Ban đầu (`MixSet__03_11`) | Tối ưu (`MixSet__17_11`) |
+| Metric | Initial (`MixSet__03_11`) | Optimized (`MixSet__17_11`) |
 |---|---|---|
 | Accuracy | 94.95% | 93.70% |
 | Precision (Human) | 0.50 | **0.90** |
@@ -95,15 +88,15 @@ Các kỹ thuật chính:
 | F1 (Human) | 0.64 | **0.87** |
 | Macro F1 | 0.81 | **0.91** |
 
-**Nhận xét:** Accuracy giảm nhẹ nhưng độ cân bằng giữa hai lớp được cải thiện rõ rệt. Trên dữ liệu mất cân bằng, chỉ nhìn vào Accuracy là chưa đủ.
+**Takeaway:** Accuracy drops slightly, but the balance between the two classes improves significantly. On imbalanced data, accuracy alone is not enough.
 
-## 6. Hướng dẫn chạy
+## 6. Usage
 
-### Môi trường
-- Thực nghiệm được thực hiện trên **Google Colab** (GPU T4 cho Transformer, CPU cho các mô hình truyền thống).
+### Environment
+- Experiments were run on **Google Colab** (T4 GPU for Transformers, CPU for traditional models).
 - Python 3.9+
 
-### Cài đặt thư viện
+### Install dependencies
 
 ```bash
 pip install kagglehub scikit-learn xgboost lightgbm transformers datasets torch nltk pandas matplotlib
@@ -115,43 +108,43 @@ nltk.download("punkt")
 nltk.download("punkt_tab")
 ```
 
-### Thứ tự chạy
+### Running order
 
-1. Chạy `DAIGT_V2_2710_1` và `DAIGT_V2_2710_2` để lấy kết quả khảo sát trên DAIGT V2 *(cần cấu hình Kaggle API nếu tải dữ liệu bằng `kagglehub`)*.
-2. Chạy `create_comparision_image_among_models` để tạo hình so sánh các mô hình.
-3. Chạy `MixSet__03_11` để lấy kết quả của pipeline ban đầu.
-4. Chạy `MixSet__17_11` để lấy kết quả của pipeline đã tối ưu.
+1. Run `DAIGT_V2_2710_1` and `DAIGT_V2_2710_2` for the DAIGT V2 study *(the Kaggle API must be configured if downloading with `kagglehub`)*.
+2. Run `create_comparision_image_among_models` to generate the model comparison plots.
+3. Run `MixSet__03_11` for the initial pipeline results.
+4. Run `MixSet__17_11` for the optimized pipeline results.
 
-> Các notebook tự động tải dữ liệu từ Kaggle / Hugging Face khi chạy.
+> The notebooks automatically download data from Kaggle / Hugging Face when run.
 
-## 7. Siêu tham số chính
+## 7. Key Hyperparameters
 
-| Thành phần | Giá trị |
+| Component | Value |
 |---|---|
 | TF-IDF (DAIGT) | `max_features=15000`, `stop_words='english'` |
 | Random Forest | `n_estimators=100`, `random_state=42` |
 | ELECTRA | `google/electra-small-discriminator`, `max_length=128` |
 | SVM (MixSet) | `kernel='rbf'`, `C=1.0`, `class_weight='balanced'`, `probability=True` |
-| Undersampling | Tỷ lệ MGT/HWT ≈ 1.5 trên tập train |
-| Ngưỡng tối ưu (lớp Human) | ≈ 0.7959 |
+| Undersampling | MGT/HWT ratio ≈ 1.5 on the training set |
+| Optimal threshold (Human class) | ≈ 0.7959 |
 
-## 8. Hạn chế và hướng phát triển
+## 8. Limitations and Future Work
 
-**Hạn chế**
-- ELECTRA chưa được fine-tune chuyên sâu trên MixSet (chủ yếu dùng để trích xuất embedding và majority voting).
-- Đánh giá chủ yếu ở mức câu, chưa khảo sát tổng hợp lên mức toàn văn bản.
-- Undersampling làm mất một phần thông tin của lớp đa số.
-- Chỉ thực nghiệm trên tiếng Anh; MixSet có quy mô còn nhỏ.
-- Chưa so sánh trực tiếp với DetectGPT, Binoculars hay full fine-tuning.
+**Limitations**
+- ELECTRA is not deeply fine-tuned on MixSet (mainly used for embedding extraction and majority voting).
+- Evaluation is mostly at the sentence level; aggregation to the full-document level is not fully explored.
+- Undersampling discards part of the majority-class information.
+- Experiments use English only, and MixSet is relatively small.
+- No direct comparison with DetectGPT, Binoculars, or full fine-tuning.
 
-**Hướng phát triển**
-- Fine-tune hoàn toàn ELECTRA / DeBERTa-v3 / RoBERTa-large trên MixSet.
-- Tổng hợp dự đoán từ mức câu lên mức văn bản (document-level aggregation).
-- Thử SMOTE trên không gian embedding, focal loss, generative augmentation.
-- Mở rộng sang tiếng Việt (có bước tách từ) và xây dựng bộ dữ liệu đồng sáng tác tiếng Việt.
-- Tích hợp vào công cụ kiểm tra liêm chính học thuật cho phép tùy chỉnh ngưỡng quyết định.
+**Future work**
+- Fully fine-tune ELECTRA / DeBERTa-v3 / RoBERTa-large on MixSet.
+- Aggregate predictions from sentence level to document level.
+- Try SMOTE in embedding space, focal loss, and generative augmentation.
+- Extend to Vietnamese (with word segmentation) and build a Vietnamese co-authored text dataset.
+- Integrate into an academic integrity tool with an adjustable decision threshold.
 
-## 9. Tài liệu tham khảo
+## 9. References
 
 1. Ahmad, A., et al. (2026). *A Comprehensive Survey on Detecting AI-Generated Text: Challenges, Methods, and Future Directions.*
 2. Su, J., et al. (2025). *Beyond Pure Generation: Detecting Human–AI Co-Authored Text in the Era of Interactive Writing Tools.*
@@ -164,7 +157,7 @@ nltk.download("punkt_tab")
 9. Mitchell, E., et al. (2023). *DetectGPT: Zero-Shot Machine-Generated Text Detection using Probability Curvature.*
 10. Hans, A., et al. (2024). *Binoculars: Zero-Shot Detection of LLM-Generated Text.*
 
-## 10. Liên hệ
+## 10. Contact
 
-- Tác giả: Lê Thị Phụng
+- Author: Le Thi Phung
 - Repository: https://github.com/Phung965275/Human-MGT-coauthoredtext-Detection
