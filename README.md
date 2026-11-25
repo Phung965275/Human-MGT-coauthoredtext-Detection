@@ -1,6 +1,6 @@
 # Detecting Human–AI Co-Authored Text on MixSet with a Hybrid ELECTRA–SVM Pipeline
 
-Zip file represents for results in docs file.
+Zip file represents for results in docs file and the below.
 
 ## 1. Introduction
 
